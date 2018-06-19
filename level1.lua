@@ -1,7 +1,9 @@
 
 local composer = require( "composer" )
 local scene = composer.newScene()
-local bird
+local bird, textScore, score, textBullet, bullets
+local widthHero = 10
+local heightHero = 20
 local physics = require "physics"
 
 --------------------------------------------
@@ -11,10 +13,59 @@ local screenW, screenH, halfW, halfH = display.actualContentWidth, display.actua
 
 
 
+
+function createBullets()
+	local bullet = display.newCircle( halfW, halfH, 3 )
+	bullet.name = "bullet"
+	bullet.strokeWidth = 2
+	bullet:setStrokeColor( 0, 0, 0 , 40)
+	physics.addBody( bullet, "dynamic" )
+end
+
+function createEnemys()
+
+	local enemy = display.newRect( display.contentCenterX, display.contentCenterY-200, 50, 5 )
+	enemy:setFillColor( 0 , 0 , 0 )
+	physics.addBody( enemy, "static" )
+
+end
+
+function updateTexts()
+	textScore.text = "Score " .. score
+	textBullet.text = "Bullets " .. bullets
+end
+
+function createTexts()
+	textScore = display.newText( "Score: 0 ", display.contentWidth-50, display.contentHeight + 20, native.systemFont, 16 )
+	textBullet = display.newText( "Bullets: 0 ", 40, display.contentHeight + 20, native.systemFont, 16 )
+	textScore:setFillColor( 0, 0, 0 )
+	textBullet:setFillColor( 0, 0, 0 )
+end
+
+function shot()
+
+	local newShot = display.newCircle( bird.x, bird.y, 3 )
+
+		newShot:setFillColor( 0, 0, 0 )
+    physics.addBody( newShot, "dynamic", { isSensor=true } )
+    newShot.isBullet = true
+    newShot.myName = "shot"
+		newShot.x = bird.x
+		newShot.y = bird.y
+
+		transition.to( newShot, { y=-40, time=500,
+			onComplete = function() display.remove( newShot )
+			end
+	} )
+end
+
 function scene:create( event )
 
 	local sceneGroup = self.view
+	local mainGroup = display.newGroup()  -- Display group for the ship, asteroids, lasers, etc.
+
 	physics.start()
+	physics.setGravity( 0, 0.3 )
 	physics.pause()
 
 
@@ -39,13 +90,19 @@ function scene:create( event )
 	 		elseif event.phase == "ended" or event.phase == "cancelled" then
 			display.getCurrentStage():setFocus( self, nil )
 	  	self.isFocus = false
+				end
 			end
-		end
-	return true
-end
+		return true
+	end
 
+	createTexts()
+	createEnemys()
+	createBullets()
   bird:addEventListener( "touch", bird )
+	bird:addEventListener( "tap", shot )
+
 	sceneGroup:insert( background )
+	sceneGroup:insert( mainGroup )
 end
 
 
@@ -54,48 +111,27 @@ function scene:show( event )
 	local phase = event.phase
 
 	if phase == "will" then
-		-- Called when the scene is still off screen and is about to move on screen
 	elseif phase == "did" then
-		-- Called when the scene is now on screen
-		--
-		-- INSERT code here to make the scene come alive
-		-- e.g. start timers, begin animation, play audio, etc.
 		physics.start()
 	end
 end
 
 function scene:hide( event )
 	local sceneGroup = self.view
-
 	local phase = event.phase
-
 	if event.phase == "will" then
-		-- Called when the scene is on screen and is about to move off screen
-		--
-		-- INSERT code here to pause the scene
-		-- e.g. stop timers, stop animation, unload sounds, etc.)
 		physics.stop()
 	elseif phase == "did" then
-		-- Called when the scene is now off screen
 	end
 
 end
 
 function scene:destroy( event )
-
-	-- Called prior to the removal of scene's "view" (sceneGroup)
-	--
-	-- INSERT code here to cleanup the scene
-	-- e.g. remove display objects, remove touch listeners, save state, etc.
 	local sceneGroup = self.view
-
 	package.loaded[physics] = nil
 	physics = nil
 end
 
----------------------------------------------------------------------------------
-
--- Listener setup
 scene:addEventListener( "create", scene )
 scene:addEventListener( "show", scene )
 scene:addEventListener( "hide", scene )
